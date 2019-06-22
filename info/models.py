@@ -11,18 +11,18 @@ class BaseModel(object):
     update_time = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)  # 记录的更新时间
 
 
-
+# 用户收藏表，建立用户与其收藏新闻多对多的关系
 tb_user_collection = db.Table(
     "info_user_collection",
-    db.Column("user_id", db.Integer, db.ForeignKey("info_user.id"), primary_key=True),
-    db.Column("news_id", db.Integer, db.ForeignKey("info_news.id"), primary_key=True),
-    db.Column("create_time", db.DateTime, default=datetime.now)
+    db.Column("user_id", db.Integer, db.ForeignKey("info_user.id"), primary_key=True),  # 新闻编号
+    db.Column("news_id", db.Integer, db.ForeignKey("info_news.id"), primary_key=True),  # 分类编号
+    db.Column("create_time", db.DateTime, default=datetime.now)  # 收藏创建时间
 )
 
 tb_user_follows = db.Table(
     "info_user_fans",
-    db.Column('follower_id', db.Integer, db.ForeignKey('info_user.id'), primary_key=True),
-    db.Column('followed_id', db.Integer, db.ForeignKey('info_user.id'), primary_key=True)
+    db.Column('follower_id', db.Integer, db.ForeignKey('info_user.id'), primary_key=True),  # 粉丝id
+    db.Column('followed_id', db.Integer, db.ForeignKey('info_user.id'), primary_key=True)  # 被关注人的id
 )
 
 
@@ -144,8 +144,8 @@ class Comment(BaseModel, db.Model):
     __tablename__ = "info_comment"
 
     id = db.Column(db.Integer, primary_key=True)  # 评论编号
-    user_id = db.Column(db.Integer, db.ForeignKey("info_user.id"), nullable=False)
-    news_id = db.Column(db.Integer, db.ForeignKey("info_news.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("info_user.id"), nullable=False)  # 用户id
+    news_id = db.Column(db.Integer, db.ForeignKey("info_news.id"), nullable=False)  # 新闻id
     content = db.Column(db.Text, nullable=False)  # 评论内容
     parent_id = db.Column(db.Integer, db.ForeignKey("info_comment.id"))  # 父评论id
     parent = db.relationship("Comment", remote_side=[id])  # 自关联
