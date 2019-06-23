@@ -9,10 +9,11 @@ from flask import Flask
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
+from flask_wtf.csrf import generate_csrf
 from redis import StrictRedis
 
 from config import config
-
+from info.utils.common import do_index_class
 
 db = SQLAlchemy()
 
@@ -46,9 +47,17 @@ def create_app(config_name):
     redis_store = StrictRedis(host=config[config_name].REDIS_HOST, port=config[config_name].REDIS_PORT,decode_responses=True)
 
 
-    # CSRFProtect(app)
+    CSRFProtect(app)
 
     Session(app)
+
+    app.add_template_filter(do_index_class,"index_class")
+
+    @app.after_request
+    def after_request(response):
+        csrf_token = generate_csrf()
+        response.set_cookie("csrf_token",csrf_token)
+        return response
 
 
     from info.modules.index import index_blu

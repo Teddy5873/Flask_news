@@ -17,6 +17,64 @@ from . import passport_blu
 from info.utils.captcha.captcha import captcha
 
 
+@passport_blu.route('/logout')
+def logout():
+    """
+    退出登录
+    :return:
+    """
+    # pop是移除session中的数据(dict)
+    # pop 会有一个返回值，如果要移除的key不存在，就返回None
+    session.pop('user_id', None)
+    session.pop('mobile', None)
+    session.pop('nick_name', None)
+
+    return jsonify(errno=RET.OK, errmsg="退出成功")
+
+
+@passport_blu.route('/login', methods=["POST"])
+def login():
+    params_dict = request.json
+    mobile = params_dict.get("mobile")
+    password = params_dict.get("password")
+
+    if not all([mobile,password]):
+        return jsonify(errno = RET.PARAMERR,errmsg="参数错误")
+
+    try:
+        user = User.query.filter(User.mobile == mobile).first()
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR, errmsg="数据查询错误")
+    # 判断用户是否存在
+    if not user:
+        return jsonify(errno=RET.NODATA, errmsg="用户不存在")
+
+    # 校验登录的密码和当前用户的密码是否一致
+    if not user.check_password(password):
+        return jsonify(errno=RET.PWDERR, errmsg="用户名或者密码错误")
+
+    # 4. 保存用户的登录状态
+    session["user_id"] = user.id
+    session["mobile"] = user.mobile
+    session["nick_name"] = user.nick_name
+
+    # 设置当前用户最后一次登录的时间
+    user.last_login = datetime.now()
+
+    # 如果在视图函数中，对模型身上的属性有修改，那么需要commit到数据库保存
+    # 但是其实可以不用自己去写 db.session.commit(),前提是对SQLAlchemy有过相关配置
+
+    # try:
+    #     db.session.commit()
+    # except Exception as e:
+    #     db.session.rollback()
+    #     current_app.logger.error(e)
+
+    # 5. 响应
+    return jsonify(errno=RET.OK, errmsg="登录成功")
+
+
 @passport_blu.route('/register', methods=["POST"])
 def register():
     """
@@ -65,6 +123,8 @@ def register():
     # 记录用户最后一次登录时间
     user.last_login = datetime.now()
     # TODO 对密码做处理
+    user.password = password
+
 
     # 6. 添加到数据库
     try:
@@ -138,6 +198,7 @@ def send_sms_code():
     current_app.logger.debug("短信验证码内容是：%s" % sms_code_str)
     # 6. 发送短信验证码
     result = CCP().send_template_sms(mobile, [sms_code_str, constants.SMS_CODE_REDIS_EXPIRES / 5], "1")
+    print(result)
     if result != 0:
         # 代表发送不成功
         return jsonify(errno=RET.THIRDERR, errmsg="发送短信失败")
@@ -187,4 +248,6 @@ def get_image_code():
     # 设置数据的类型，以便浏览器更加智能识别其是什么类型
     response.headers["Content-Type"] = "image/jpg"
     return response
+
+
 
